@@ -1,0 +1,76 @@
+name: "ACore Module Build and Release"
+description: "A reusable action for building, checking, and releasing AzerothCore modules"
+author: "araxiaonline"
+
+inputs:
+  GITHUB_TOKEN:
+    description: "GitHub token"
+    required: true
+  tag_release:
+    description: "Tag a release if the build is successful"
+    required: false
+    default: "false"
+  bump_version_scheme:
+    description: "Version bump scheme (e.g., minor, major, patch)"
+    required: false
+    default: "minor"    
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Cache Docker layers
+      uses: actions/cache@v3
+      with:
+        path: /home/runner/.docker
+        key: ${{ runner.os }}-docker-${{ hashFiles('Dockerfile') }}
+        restore-keys: |
+          ${{ runner.os }}-docker-
+
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Get repository name
+      id: repo-name
+      run: echo "REPO_NAME=$(basename $GITHUB_REPOSITORY | sed 's|.*/||')" >> $GITHUB_ENV
+
+    - name: Copy module to container
+      run: |
+        mkdir -p /azerothcore/modules/${{ env.REPO_NAME }}
+        cp -r . /azerothcore/modules/${{ env.REPO_NAME }}
+
+    - name: Rebuild Modules with Caching
+      run: |
+        cd /azerothcore/build \
+        && cmake /azerothcore \
+           -DCMAKE_INSTALL_PREFIX="/azerothcore/env/dist"  \
+           -DAPPS_BUILD="all"                              \
+           -DTOOLS_BUILD="all"                             \
+           -DSCRIPTS="static"                              \
+           -DMODULES="static"                              \
+           -DWITH_WARNINGS="ON"                            \
+           -DCMAKE_BUILD_TYPE="RelWithDebInfo"             \
+           -DCMAKE_CXX_COMPILER="clang++"                  \
+           -DCMAKE_C_COMPILER="clang"                      \
+           -DCMAKE_CXX_COMPILER_LAUNCHER="ccache"          \
+           -DCMAKE_C_COMPILER_LAUNCHER="ccache"            \
+           -DBoost_USE_STATIC_LIBS="ON"                    \
+        && cmake --build . --config "RelWithDebInfo" -j $(($(nproc) + 1))
+
+    - name: Install cppcheck
+      run: apt-get update && apt-get install -y cppcheck
+
+    - name: cpp check
+      run: |
+        cppcheck --force --inline-suppr --output-file=report.txt /azerothcore/modules/${{ env.REPO_NAME }}
+        if [ -s report.txt ]; then
+          cat report.txt
+          exit 1
+
+    - name: Tag Release on Success
+      if: ${{ inputs.tag_release == 'true' }}
+      uses: rymndhng/release-on-push-action@master
+      with:
+        bump_version_scheme: ${{ inputs.bump_version_scheme }}
+      env:
+        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
