@@ -32,14 +32,17 @@ runs:
 
     - name: Get repository name
       id: repo-name
+      shell: bash
       run: echo "REPO_NAME=$(basename $GITHUB_REPOSITORY | sed 's|.*/||')" >> $GITHUB_ENV
 
     - name: Copy module to container
+      shell: bash
       run: |
         mkdir -p /azerothcore/modules/${{ env.REPO_NAME }}
         cp -r . /azerothcore/modules/${{ env.REPO_NAME }}
 
     - name: Rebuild Modules with Caching
+      shell: bash
       run: |
         cd /azerothcore/build \
         && cmake /azerothcore \
@@ -58,9 +61,11 @@ runs:
         && cmake --build . --config "RelWithDebInfo" -j $(($(nproc) + 1))
 
     - name: Install cppcheck
+      shell: bash
       run: apt-get update && apt-get install -y cppcheck
 
     - name: cpp check
+      shell: bash
       run: |
         cppcheck --force --inline-suppr --output-file=report.txt /azerothcore/modules/${{ env.REPO_NAME }}
         if [ -s report.txt ]; then
