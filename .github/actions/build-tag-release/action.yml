@@ -78,7 +78,7 @@ runs:
         fi
 
     - name: Tag Release on Success
-      if: ${{ inputs.tag_release == 'true' }}
+      if: ${{ inputs.tag_release == 'true' }} && ${{ inputs.event_name == 'push' }}
       uses: rymndhng/release-on-push-action@master
       with:
         bump_version_scheme: ${{ inputs.bump_version_scheme }}
