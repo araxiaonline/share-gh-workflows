@@ -46,6 +46,7 @@ runs:
         cp -r . /azerothcore/modules/${{ env.REPO_NAME }}
 
     - name: Set up ccache directory
+      shell: bash
       run: |
         export CCACHE_DIR=/home/runner/work/${{ github.repository }}/_ccache
         ccache --zero-stats
@@ -85,6 +86,7 @@ runs:
         key: ${{ runner.os }}-ccache-${{ hashFiles('**/*.cpp', '**/*.h') }}
 
     - name: Show ccache stats
+      shell: bash
       run: |
         export CCACHE_DIR=/home/runner/work/${{ github.repository }}/_ccache
         ccache --show-stats
