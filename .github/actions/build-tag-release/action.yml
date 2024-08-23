@@ -72,7 +72,7 @@ runs:
       if: ${{ inputs.tag_release == 'true' }}
       shell: bash
       run: |
-        cppcheck --force --inline-suppr --std=c++14 --output-file=report.txt /azerothcore/modules/${{ env.REPO_NAME }}
+        cppcheck --force --inline-suppr --std=c++20 --output-file=report.txt /azerothcore/modules/${{ env.REPO_NAME }}
         if [ -s report.txt ]; then
           cat report.txt
           exit 1
