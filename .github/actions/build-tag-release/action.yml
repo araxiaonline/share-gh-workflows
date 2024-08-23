@@ -45,6 +45,19 @@ runs:
         mkdir -p /azerothcore/modules/${{ env.REPO_NAME }}
         cp -r . /azerothcore/modules/${{ env.REPO_NAME }}
 
+    - name: Set up ccache directory
+      run: |
+        export CCACHE_DIR=/home/runner/work/${{ github.repository }}/_ccache
+        ccache --zero-stats
+
+    - name: Restore ccache
+      uses: actions/cache@v4
+      with:
+        path: /home/runner/work/${{ github.repository }}/_ccache
+        key: ${{ runner.os }}-ccache-${{ hashFiles('**/*.cpp', '**/*.h') }}
+        restore-keys: |
+          ${{ runner.os }}-ccache-
+
     - name: build modules with caching
       shell: bash
       run: |
@@ -64,6 +77,18 @@ runs:
            -DBoost_USE_STATIC_LIBS="ON"                    \
         && cmake --build . --config "RelWithDebInfo" -j $(($(nproc) + 1))
 
+    - name: Save ccache
+      if: success()
+      uses: actions/cache@v4
+      with:
+        path: /home/runner/work/${{ github.repository }}/_ccache
+        key: ${{ runner.os }}-ccache-${{ hashFiles('**/*.cpp', '**/*.h') }}
+
+    - name: Show ccache stats
+      run: |
+        export CCACHE_DIR=/home/runner/work/${{ github.repository }}/_ccache
+        ccache --show-stats
+
     - name: install cppcheck
       shell: bash
       run: apt-get update && apt-get install -y cppcheck
@@ -82,7 +107,7 @@ runs:
       run: |
         cppcheck --force --inline-suppr --std=c++20 --output-file=report.txt \
                  --exclude=LuaEngine/libs \
-                 --jobs=$(nproc) --enable=warning,error \
+                 --enable=warning,error \
                  --cppcheck-build-dir=/home/runner/work/${{ github.repository }}/_cppcheck_cache \
                  
                  /azerothcore/modules/${{ env.REPO_NAME }}
