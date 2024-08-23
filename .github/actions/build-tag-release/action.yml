@@ -111,8 +111,7 @@ runs:
                  -i /azerothcore/modules/mod-eluna/LuaEngine/libs \
                  -j $(nproc)
                  --enable=warning,error \
-                 --cppcheck-build-dir=/home/runner/work/${{ github.repository }}/_cppcheck_cache \
-                 
+                 --cppcheck-build-dir=/home/runner/work/${{ github.repository }}/_cppcheck_cache \                 
                  /azerothcore/modules/${{ env.REPO_NAME }}
         if [ -s report.txt ]; then
           cat report.txt
