@@ -108,7 +108,8 @@ runs:
       shell: bash
       run: |
         cppcheck --force --inline-suppr --std=c++20 --output-file=report.txt \
-                 --exclude=LuaEngine/libs \
+                 -i /azerothcore/modules/mod-eluna/LuaEngine/libs \
+                 -j $(nproc)
                  --enable=warning,error \
                  --cppcheck-build-dir=/home/runner/work/${{ github.repository }}/_cppcheck_cache \
                  
