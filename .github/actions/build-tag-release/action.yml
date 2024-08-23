@@ -23,7 +23,7 @@ runs:
   using: "composite"
   steps:
 
-    - name: Cache Docker layers
+    - name: cache docker
       uses: actions/cache@v4
       with:
         path: /home/runner/.docker
@@ -31,21 +31,21 @@ runs:
         restore-keys: |
           ${{ runner.os }}-docker-
 
-    - name: Checkout code
+    - name: checkout code
       uses: actions/checkout@v4
 
-    - name: Get repository name
+    - name: get repo name
       id: repo-name
       shell: bash
       run: echo "REPO_NAME=$(basename $GITHUB_REPOSITORY | sed 's|.*/||')" >> $GITHUB_ENV
 
-    - name: Copy module to container
+    - name: copy module to container
       shell: bash
       run: |
         mkdir -p /azerothcore/modules/${{ env.REPO_NAME }}
         cp -r . /azerothcore/modules/${{ env.REPO_NAME }}
 
-    - name: Rebuild Modules with Caching
+    - name: build modules with caching
       shell: bash
       run: |
         cd /azerothcore/build \
@@ -64,24 +64,44 @@ runs:
            -DBoost_USE_STATIC_LIBS="ON"                    \
         && cmake --build . --config "RelWithDebInfo" -j $(($(nproc) + 1))
 
-    - name: Install cppcheck
+    - name: install cppcheck
       shell: bash
       run: apt-get update && apt-get install -y cppcheck
+
+    - name: get cppcheck cache
+      uses: actions/cache@v4
+      with:
+        path: /home/runner/work/${{ github.repository }}/_cppcheck_cache
+        key: ${{ runner.os }}-cppcheck-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-cppcheck-
 
     - name: cpp check
       if: ${{ inputs.tag_release == 'true' }}
       shell: bash
       run: |
-        cppcheck --force --inline-suppr --std=c++20 --output-file=report.txt /azerothcore/modules/${{ env.REPO_NAME }}
+        cppcheck --force --inline-suppr --std=c++20 --output-file=report.txt \
+                 --jobs=$(nproc) --enable=warning,error \
+                 --cppcheck-build-dir=/home/runner/work/${{ github.repository }}/_cppcheck_cache \
+                 /azerothcore/modules/${{ env.REPO_NAME }}
         if [ -s report.txt ]; then
           cat report.txt
           exit 1
         fi
 
-    - name: Tag Release on Success
+    - name: tag release 
       if: ${{ inputs.tag_release == 'true' }} && ${{ inputs.event_name == 'push' }}
       uses: rymndhng/release-on-push-action@master
       with:
         bump_version_scheme: ${{ inputs.bump_version_scheme }}
       env:
         GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+
+    - name: save cppcheck cache
+      if: success()
+      uses: actions/cache@v4
+      with:
+        path: /home/runner/work/${{ github.repository }}/_cppcheck_cache
+        key: ${{ runner.os }}-cppcheck-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-cppcheck-
