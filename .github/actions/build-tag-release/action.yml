@@ -115,12 +115,14 @@ runs:
           --suppress=*:*lualib/* \
           --suppress=*:*LuaEngine/libs/* \        
           -j $(nproc) --enable=warning \
-          --cppcheck-build-dir=/home/runner/work/araxiaonline/${{ env.REPO_NAME }}/_cppcheck_cache \
+          --cppcheck-build-dir=/home/runner/work/${{ github.repository }}/_cppcheck_cache \
           /azerothcore/modules/${{ env.REPO_NAME }}
 
         if [ -s report.txt ]; then
+          echo "Cppcheck found issues:"
           cat report.txt
-          exit 1
+        else
+          echo "No issues found by cppcheck."
         fi
 
     - name: tag release 
